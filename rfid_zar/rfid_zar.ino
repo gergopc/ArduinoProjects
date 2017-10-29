@@ -41,17 +41,26 @@
 
 #define ADD_CARD_TASK 1
 #define REMOVE_CARD_TASK 2
+#define MAX_CARDS 10
+
+struct UID{
+  byte b0;
+  byte b1;
+  byte b2;
+  byte b3;
+  byte er;
+  };
 
 char r;
 boolean adminmode;
 int task;
-int adminuid = 4294944089;
+UID adminuid = {0xE6, 0x7F, 0xA5, 0x59};
 constexpr uint8_t RST_PIN = 8;          // Configurable, see typical pin layout above
 constexpr uint8_t SS_PIN = 9;    // Configurable, see typical pin layout above
 boolean door = false;
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
-//Servo servo;
+
 
 void setup() {
   //servo.attach(6);
@@ -78,27 +87,49 @@ void loop() {
       Serial.println("Touch the card");
     }else Serial.println("Use the admin card");
    }
+     if(r=='l'){
+  for(int i=0; i<MAX_CARDS; i++){
+   Serial.print("ADDR: ");
+   Serial.print(i);
+   Serial.print(" \n");
+  for(int j=0; j<5; j++){
+    Serial.println(EEPROM.read(i*5+j), HEX);
+  }
+  }
+     }
+     if(r=='c'){
+     for(int i=0; i<MAX_CARDS; i++){
+  for(int j=0; j<5; j++){
+    EEPROM.write(i*5+j, 0);
+  }
+  }
+     }
+ 
 	if(mfrc522.PICC_IsNewCardPresent()) {
-  unsigned long uid = getID();
-  if(uid != -1){
-    Serial.print("Card detected, UID: "); Serial.println(uid);
-    Serial.println(getCards(uid));
+  UID carduid = getID();
+  if(carduid.er != 1){
+    Serial.print("Card detected, UID: ");
+    Serial.print(carduid.b0, HEX);
+    Serial.print(carduid.b1, HEX);
+    Serial.print(carduid.b2, HEX);
+    Serial.println(carduid.b3, HEX);
+    Serial.println(getCards(carduid));
     
     if(task==ADD_CARD_TASK){
       task = 0;
       Serial.println("Added");
-      addCard(uid);
+     addCard(carduid);
     }else if(task==REMOVE_CARD_TASK){
       task = 0;
       Serial.println("Removed");
     }
- if(getCards(uid)==0){
+ if(getCards(carduid)==0){
   adminmode = false;
   Serial.println("NOT OK");
- }else if(getCards(uid)==1){
+ }else if(getCards(carduid)==1){
   adminmode = false;
   Serial.println("OK");
- }else if(getCards(uid)==2){
+ }else if(getCards(carduid)==2){
   adminmode = !adminmode;
   Serial.println("Admin card detected");
   }
@@ -107,38 +138,58 @@ void loop() {
 }
 }
 }
-void addCard(int uid){
-  if(uid != adminuid){
-  int addr = EEPROM.length() + 1;
-  EEPROM.write(addr, uid);
+UID getID(){
+    UID uid;
+  if ( ! mfrc522.PICC_ReadCardSerial()) { //Since a PICC placed get Serial and continue
+    uid.er=1;
   }
+  uid.b0 = mfrc522.uid.uidByte[0];
+  uid.b1 = mfrc522.uid.uidByte[1];
+  uid.b2 = mfrc522.uid.uidByte[2];
+  uid.b3 = mfrc522.uid.uidByte[3];
+  uid.er = 0;
+  mfrc522.PICC_HaltA(); // Stop reading
+  return uid;
+}
+void addCard(UID uid){
+ if(!adcheck){
+  for(int i=0; i<MAX_CARDS; i++){
+    if(EEPROM.read(i*5)==0){
+      
+    }
+  }
+ }
 }
 void removeCard(int uid){
- 
+ for(int i=0; i<MAX_CARDS; i++){
+  if(EEPROM.read(i)==uid) EEPROM.write(i, 0);
+ }
 }
 void openDoor(){
   
 }
-int getCards(int uid){
-  int ret;
-  for (int i=0; i<EEPROM.length(); i++){
-    if(uid == EEPROM.read(i)) ret=1;
-    else ret=0;
+int getCards(UID uid){
+ int ret;
+ int check = 0;
+for(int i; i<MAX_CARDS; i++){
+  if(EEPROM.read(i*4)==1) check++;
+  if(EEPROM.read(i*4+1)==uid.b0) check++;
+  if(EEPROM.read(i*4+2)==uid.b1) check++;
+  if(EEPROM.read(i*4+3)==uid.b2) check++;
+  if(EEPROM.read(i*4+4)==uid.b3) check++; 
+  if(check==5) ret = 1;
+  else ret = 0;
   }
-  if(uid==adminuid){
-    ret=2;
-  }
-  return ret;
+  if(adcheck) ret = 2;
+ return ret;
 }
-unsigned long getID(){
-  if ( ! mfrc522.PICC_ReadCardSerial()) { //Since a PICC placed get Serial and continue
-    return -1;
-  }
-  unsigned long hex_num;
-  hex_num =  mfrc522.uid.uidByte[0] << 24;
-  hex_num += mfrc522.uid.uidByte[1] << 16;
-  hex_num += mfrc522.uid.uidByte[2] <<  8;
-  hex_num += mfrc522.uid.uidByte[3];
-  mfrc522.PICC_HaltA(); // Stop reading
-  return hex_num;
+boolean adminCheck(UID uid){
+  int adcheck;
+  if(uid.b0==adminuid.b0) adcheck++;
+  if(uid.b1==adminuid.b1) adcheck++;
+  if(uid.b2==adminuid.b2) adcheck++;
+  if(uid.b3==adminuid.b3) adcheck++;
+  if(adcheck==4) return true;
+  else return false;
 }
+

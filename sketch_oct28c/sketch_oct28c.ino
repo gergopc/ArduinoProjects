@@ -19,7 +19,7 @@ void loop() {
  }
  if(r=='r'){
  for(int i=0; i<10; i++){
-  if(EEPROM.read(i)==3) EEPROM.write(i, 0);
+  if(EEPROM.read(i)==r) EEPROM.write(i, 0);
  }
  }
 if(r=='a'){
