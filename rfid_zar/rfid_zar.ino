@@ -59,19 +59,19 @@ void setup() {
 void loop() {
 	if(Serial.available())
   r = Serial.read();
-   if(r=='a'){
+   if(r=='a'){ //add rfid card command
     if(adminmode){
       task = ADD_CARD_TASK;
       Serial.println("Touch the card");
     }else Serial.println("Use the admin card");
    }
-   if(r=='r'){
+   if(r=='r'){ //remove rfid card command
     if(adminmode){
       task = REMOVE_CARD_TASK; 
       Serial.println("Touch the card");
     }else Serial.println("Use the admin card");
    }
-     if(r=='l'){
+     if(r=='l'){ //list eeprom values command
   for(int i=0; i<MAX_CARDS; i++){
    Serial.print("ADDR: ");
    Serial.print(i);
@@ -81,7 +81,7 @@ void loop() {
   }
   }
      }
-     if(r=='c'){
+     if(r=='c'){ //clear eeprom command
      for(int i=0; i<MAX_CARDS; i++){
   for(int j=0; j<5; j++){
     EEPROM.write(i*5+j, 0);
