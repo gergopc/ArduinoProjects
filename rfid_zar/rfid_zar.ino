@@ -33,6 +33,7 @@ struct UID{
   byte er;
   };
 
+int led = 13;
 char r;
 boolean adminmode;
 byte task;
@@ -46,6 +47,7 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 
 void setup() {
   //servo.attach(6);
+  pinMode(led, OUTPUT);
 	Serial.begin(9600);		// Initialize serial communications with the PC
 	while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
 	SPI.begin();			// Init SPI bus
@@ -110,9 +112,10 @@ void loop() {
  }else if(getCards(carduid)==1){
   adminmode = false;
   Serial.println("OK");
-  openDoor();
+  if(task==0) openDoor();
  }else if(getCards(carduid)==2){
   adminmode = !adminmode;
+  if(task==0) openDoor();
   Serial.println("Admin card detected");
   }
   if(adminmode)Serial.println("Admin mode enabled");
@@ -162,7 +165,7 @@ for(int i; i<MAX_CARDS; i++){
   }
 }
 void openDoor(){
-  
+  digitalWrite(led, !digitalRead(led));
 }
 int getCards(UID uid){
  int ret;
