@@ -1,26 +1,6 @@
 
 
 /*
- * --------------------------------------------------------------------------------------------------------------------
- * Example sketch/program showing how to read data from a PICC to serial.
- * --------------------------------------------------------------------------------------------------------------------
- * This is a MFRC522 library example; for further details and other examples see: https://github.com/miguelbalboa/rfid
- * 
- * Example sketch/program showing how to read data from a PICC (that is: a RFID Tag or Card) using a MFRC522 based RFID
- * Reader on the Arduino SPI interface.
- * 
- * When the Arduino and the MFRC522 module are connected (see the pin layout below), load this sketch into Arduino IDE
- * then verify/compile and upload it. To see the output: use Tools, Serial Monitor of the IDE (hit Ctrl+Shft+M). When
- * you present a PICC (that is: a RFID Tag or Card) at reading distance of the MFRC522 Reader/PCD, the serial output
- * will show the ID/UID, type and any data blocks it can read. Note: you may see "Timeout in communication" messages
- * when removing the PICC from reading distance too early.
- * 
- * If your reader supports it, this sketch/program will read all the PICCs presented (that is: multiple tag reading).
- * So if you stack two or more PICCs on top of each other and present them to the reader, it will first output all
- * details of the first and then the next PICC. Note that this may take some time as all data blocks are dumped, so
- * keep the PICCs at reading distance until complete.
- * 
- * @license Released into the public domain.
  * 
  * Typical pin layout used:
  * -----------------------------------------------------------------------------------------
@@ -42,6 +22,8 @@
 #define ADD_CARD_TASK 1
 #define REMOVE_CARD_TASK 2
 #define MAX_CARDS 10
+#define CARD_EXISTS 0xFF
+#define CARD_NOT_EXISTS 0x00
 
 struct UID{
   byte b0;
@@ -53,7 +35,7 @@ struct UID{
 
 char r;
 boolean adminmode;
-int task;
+byte task;
 UID adminuid = {0xE6, 0x7F, 0xA5, 0x59};
 constexpr uint8_t RST_PIN = 8;          // Configurable, see typical pin layout above
 constexpr uint8_t SS_PIN = 9;    // Configurable, see typical pin layout above
@@ -117,11 +99,10 @@ void loop() {
     
     if(task==ADD_CARD_TASK){
       task = 0;
-      Serial.println("Added");
      addCard(carduid);
     }else if(task==REMOVE_CARD_TASK){
       task = 0;
-      Serial.println("Removed");
+     removeCard(carduid);
     }
  if(getCards(carduid)==0){
   adminmode = false;
@@ -129,6 +110,7 @@ void loop() {
  }else if(getCards(carduid)==1){
   adminmode = false;
   Serial.println("OK");
+  openDoor();
  }else if(getCards(carduid)==2){
   adminmode = !adminmode;
   Serial.println("Admin card detected");
@@ -152,18 +134,32 @@ UID getID(){
   return uid;
 }
 void addCard(UID uid){
- if(!adcheck){
+ if(!adminCheck(uid)){
   for(int i=0; i<MAX_CARDS; i++){
-    if(EEPROM.read(i*5)==0){
-      
+    if(EEPROM.read(i*5)==CARD_NOT_EXISTS){
+      EEPROM.write(i*5, CARD_EXISTS);
+      EEPROM.write(i*5+1, uid.b0);
+      EEPROM.write(i*5+2, uid.b1);
+      EEPROM.write(i*5+3, uid.b2);
+      EEPROM.write(i*5+4, uid.b3);
+      break;
     }
+         Serial.println("Added");
   }
  }
 }
-void removeCard(int uid){
- for(int i=0; i<MAX_CARDS; i++){
-  if(EEPROM.read(i)==uid) EEPROM.write(i, 0);
- }
+void removeCard(UID uid){
+  int check = 0;
+for(int i; i<MAX_CARDS; i++){
+  if(EEPROM.read(i*5)==CARD_EXISTS) check++;
+  if(EEPROM.read(i*5+1)==uid.b0) check++;
+  if(EEPROM.read(i*5+2)==uid.b1) check++;
+  if(EEPROM.read(i*5+3)==uid.b2) check++;
+  if(EEPROM.read(i*5+4)==uid.b3) check++; 
+  if(check==5){ EEPROM.write(i*5, CARD_NOT_EXISTS);
+  Serial.println("Removed");
+  }
+  }
 }
 void openDoor(){
   
@@ -172,15 +168,15 @@ int getCards(UID uid){
  int ret;
  int check = 0;
 for(int i; i<MAX_CARDS; i++){
-  if(EEPROM.read(i*4)==1) check++;
-  if(EEPROM.read(i*4+1)==uid.b0) check++;
-  if(EEPROM.read(i*4+2)==uid.b1) check++;
-  if(EEPROM.read(i*4+3)==uid.b2) check++;
-  if(EEPROM.read(i*4+4)==uid.b3) check++; 
+  if(EEPROM.read(i*5)==CARD_EXISTS) check++;
+  if(EEPROM.read(i*5+1)==uid.b0) check++;
+  if(EEPROM.read(i*5+2)==uid.b1) check++;
+  if(EEPROM.read(i*5+3)==uid.b2) check++;
+  if(EEPROM.read(i*5+4)==uid.b3) check++; 
   if(check==5) ret = 1;
   else ret = 0;
   }
-  if(adcheck) ret = 2;
+  if(adminCheck(uid)) ret = 2;
  return ret;
 }
 boolean adminCheck(UID uid){
