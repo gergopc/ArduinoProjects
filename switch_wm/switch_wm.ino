@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -13,17 +12,14 @@ ESP8266WebServer server(80);
 const int led = 13;
 int address = 0;
 byte val = 0b00000000;
-
+boolean state = false;
 
 void handleRoot() {
-  server.send(200, "text/plain", "hello");
-  val = EEPROM.read(address);
-  digitalWrite(led, 1);
-  if(val == 0b00000000){
-  server.send(200, "text/plain", "status: off");
-  }else if(val==0b00000001){
-  server.send(200, "text/plain", "status on");
-  }
+ if(state)
+ server.send(200, "text/plain", "status on");
+ else
+ server.send(200, "text/plain", "status off");
+ 
   digitalWrite(led, 0);
 }
 
@@ -44,38 +40,48 @@ void handleNotFound(){
   digitalWrite(led, 0);
 }
 void start_switch(){
-  val = EEPROM.read(address);
-  if(val==0b00000001){
-    digitalWrite(D1, HIGH);
-  }else if(val==0b00000000){
-    digitalWrite(D1, LOW);
+  digitalWrite(D1, LOW);
+}
+void kapcsol(){
+  static unsigned long last_interrupt_time = 0;
+ unsigned long interrupt_time = millis();
+ // If interrupts come faster than 200ms, assume it's a bounce and ignore
+ if (interrupt_time - last_interrupt_time > 200) 
+ {
+  if(state)
+  digitalWrite(D1, LOW);
+  else
+  digitalWrite(D1, HIGH);
   }
+  state=!state;
+ last_interrupt_time = interrupt_time;
 }
 void setup(void){
   pinMode(led, OUTPUT);
   pinMode(D1, OUTPUT);
+  pinMode(D3, INPUT_PULLUP);
+  attachInterrupt(D3, kapcsol, RISING);
   digitalWrite(led, 0);
-  Serial.begin(115200);
+//  Serial.begin(115200);
   WiFi.begin(ssid, password);
-  Serial.println("");
+//  Serial.println("");
 
-EEPROM.begin(512);
-val = EEPROM.read(address);
+
 start_switch();
   // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  if (MDNS.begin("esp8266")) {
-    Serial.println("MDNS responder started");
-  }
+//  while (WiFi.status() != WL_CONNECTED) {
+//    delay(500);
+//    Serial.print(".");
+//  }
+//  Serial.println("");
+//  Serial.print("Connected to ");
+//  Serial.println(ssid);
+//  Serial.print("IP address: ");
+//  Serial.println(WiFi.localIP());
+//
+//  if (MDNS.begin("esp8266")) {
+//    Serial.println("MDNS responder started");
+//  }
 
   server.on("/", handleRoot);
 
@@ -85,19 +91,19 @@ start_switch();
   
   server.on("/on", [](){
     server.send(200, "text/plain", "ON");
-    EEPROM.write(address, 1);
     digitalWrite(D1, HIGH);
+    state=true;
   });
 
   server.on("/off", [](){
     server.send(200, "text/plain", "OFF");
-    EEPROM.write(address, 0);
     digitalWrite(D1, LOW);
+    state=false;
   });
   server.onNotFound(handleNotFound);
 
   server.begin();
-  Serial.println("HTTP server started");
+//  Serial.println("HTTP server started");
 }
 
 void loop(void){
