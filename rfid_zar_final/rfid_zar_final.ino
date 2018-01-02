@@ -33,7 +33,10 @@ struct UID{
   byte er;
   };
 
-int led = 13;
+
+int redPin = 11;
+int greenPin = 10;
+int bluePin = 9;
 char r;
 boolean adminmode;
 byte task;
@@ -48,56 +51,41 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 void setup() {
   //servo.attach(6);
   pinMode(led, OUTPUT);
-  Serial.begin(9600);   // Initialize serial communications with the PC
-  while (!Serial);    // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
   SPI.begin();      // Init SPI bus
   mfrc522.PCD_Init();   // Init MFRC522
   mfrc522.PCD_DumpVersionToSerial();  // Show details of PCD - MFRC522 Card Reader details
-  Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks..."));
 }
 
 void loop() {
-  if(Serial.available())
-  r = Serial.read();
-   if(r=='a'){ //add rfid card command
-    if(adminmode){
-      task = ADD_CARD_TASK;
-      Serial.println("Touch the card");
-    }else Serial.println("Use the admin card");
-   }
-   if(r=='r'){ //remove rfid card command
-    if(adminmode){
-      task = REMOVE_CARD_TASK; 
-      Serial.println("Touch the card");
-    }else Serial.println("Use the admin card");
-   }
-     if(r=='l'){ //list eeprom values command
-  for(int i=0; i<MAX_CARDS; i++){
-   Serial.print("ADDR: ");
-   Serial.print(i);
-   Serial.print(" \n");
-  for(int j=0; j<5; j++){
-    Serial.println(EEPROM.read(i*5+j), HEX);
-  }
-  }
-     }
-     if(r=='c'){ //clear eeprom command
-     for(int i=0; i<MAX_CARDS; i++){
-  for(int j=0; j<5; j++){
-    EEPROM.write(i*5+j, 0);
-  }
-  }
-     }
+   
+ 
+//     if(r=='l'){ //list eeprom values command
+//  for(int i=0; i<MAX_CARDS; i++){
+//   Serial.print("ADDR: ");
+//   Serial.print(i);
+//   Serial.print(" \n");
+//  for(int j=0; j<5; j++){
+//    Serial.println(EEPROM.read(i*5+j), HEX);
+//  }
+//  }
+//     }
+//     if(r=='c'){ //clear eeprom command
+//     for(int i=0; i<MAX_CARDS; i++){
+//  for(int j=0; j<5; j++){
+//    EEPROM.write(i*5+j, 0);
+//  }
+//  }
+//     }
  
   if(mfrc522.PICC_IsNewCardPresent()) {
   UID carduid = getID();
   if(carduid.er != 1){
-    Serial.print("Card detected, UID: ");
-    Serial.print(carduid.b0, HEX);
-    Serial.print(carduid.b1, HEX);
-    Serial.print(carduid.b2, HEX);
-    Serial.println(carduid.b3, HEX);
-    Serial.println(getCards(carduid));
+//    Serial.print("Card detected, UID: ");
+//    Serial.print(carduid.b0, HEX);
+//    Serial.print(carduid.b1, HEX);
+//    Serial.print(carduid.b2, HEX);
+//    Serial.println(carduid.b3, HEX);
+//    Serial.println(getCards(carduid));
     
     if(task==ADD_CARD_TASK){
       task = 0;
@@ -191,4 +179,26 @@ boolean adminCheck(UID uid){
   if(adcheck==4) return true;
   else return false;
 }
-
+void addCommand(){
+    if(adminmode){
+      task = ADD_CARD_TASK;
+      Serial.println("Touch the card");
+    }else Serial.println("Use the admin card");
+}
+void remCommand(){
+   if(adminmode){
+      task = REMOVE_CARD_TASK; 
+      Serial.println("Touch the card");
+    }else Serial.println("Use the admin card");
+}
+void setColor(int red, int green, int blue)
+{
+  #ifdef COMMON_ANODE
+    red = 255 - red;
+    green = 255 - green;
+    blue = 255 - blue;
+  #endif
+  analogWrite(redPin, red);
+  analogWrite(greenPin, green);
+  analogWrite(bluePin, blue);  
+}
