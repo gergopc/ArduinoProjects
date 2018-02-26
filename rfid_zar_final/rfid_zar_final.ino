@@ -96,7 +96,9 @@ void loop() {
     }
  if(getCards(carduid)==0){
   adminmode = false;
-  Serial.println("NOT OK");
+  setColor(0, 255, 0);
+  delay(500);
+  setColor(0, 0, 0);
  }else if(getCards(carduid)==1){
   adminmode = false;
   Serial.println("OK");
