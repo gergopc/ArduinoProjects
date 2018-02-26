@@ -37,12 +37,12 @@ struct UID{
 int redPin = 11;
 int greenPin = 10;
 int bluePin = 9;
+int RST_PIN = 8;          // Configurable, see typical pin layout above
+int SS_PIN = 9;    // Configurable, see typical pin layout above
 char r;
 boolean adminmode;
 byte task;
 UID adminuid = {0xE6, 0x7F, 0xA5, 0x59};
-constexpr uint8_t RST_PIN = 8;          // Configurable, see typical pin layout above
-constexpr uint8_t SS_PIN = 9;    // Configurable, see typical pin layout above
 boolean door = false;
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
