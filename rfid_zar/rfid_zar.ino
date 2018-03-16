@@ -63,11 +63,13 @@ void loop() {
     if(adminmode){
       task = ADD_CARD_TASK;
       Serial.println("Touch the card");
+      Serial.println("setTSK" + task);
     }else Serial.println("Use the admin card");
    }
    if(r=='r'){ //remove rfid card command
     if(adminmode){
       task = REMOVE_CARD_TASK; 
+      Serial.println("setTSK" + task);
       Serial.println("Touch the card");
     }else Serial.println("Use the admin card");
    }
@@ -98,12 +100,10 @@ void loop() {
     Serial.print(carduid.b2, HEX);
     Serial.println(carduid.b3, HEX);
     Serial.println(getCards(carduid));
-    
+    Serial.println("TASK" + task);
     if(task==ADD_CARD_TASK){
-      task = 0;
      addCard(carduid);
     }else if(task==REMOVE_CARD_TASK){
-      task = 0;
      removeCard(carduid);
     }
  if(getCards(carduid)==0){
@@ -120,6 +120,7 @@ void loop() {
   }
   if(adminmode)Serial.println("Admin mode enabled");
     else Serial.println("Admin mode disabled");
+task=0;
 }
 }
 }
